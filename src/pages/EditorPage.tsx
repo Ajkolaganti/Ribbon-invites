@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Film } from '../components/Film'
 import { Missing } from '../components/Missing'
 import { plusDays } from '../lib/format'
-import { isEmail, notifyRsvp } from '../lib/mail'
+import { isEmail, notifyRsvp, sendInviteCreated } from '../lib/mail'
 import { deleteMedia, loadMedia, saveMedia } from '../lib/media'
 import { accountName, useSession } from '../lib/session'
 import { getEvent, rsvpsFor, saveEvent } from '../lib/storage'
@@ -300,6 +300,7 @@ function EditorForm({
     }
     try {
       await saveEvent(event)
+      if (!existing && isEmail(event.hostEmail)) await sendInviteCreated(event)
       const replies = await rsvpsFor(id)
       await Promise.all(replies.map((rsvp) => notifyRsvp(event, rsvp)))
     } catch (cause) {

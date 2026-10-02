@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useSession } from '../lib/session'
 import { supabase } from '../lib/supabase'
-import { isEmail } from '../lib/mail'
+import { isEmail, sendWelcome } from '../lib/mail'
 
 function nextPath(value: string | null) {
   if (!value || !value.startsWith('/') || value.startsWith('//') || value.startsWith('/join') || value.startsWith('/i/')) {
@@ -50,11 +50,15 @@ export function AccountPage() {
             options: { data: { name: name.trim() } },
           })
         : await supabase.auth.signInWithPassword({ email: email.trim(), password })
-    setPending(false)
     if (result.error) {
+      setPending(false)
       setError(result.error.message)
       return
     }
+    if (mode === 'create' && result.data.user) {
+      await sendWelcome(name.trim(), email.trim(), result.data.user.id)
+    }
+    setPending(false)
     if (!result.data.session) {
       setError('Check your email to confirm the account, then sign in.')
     }

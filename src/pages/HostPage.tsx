@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { EventFilm } from '../components/Film'
 import { GuestList } from '../components/GuestList'
@@ -6,7 +6,7 @@ import { Missing } from '../components/Missing'
 import { foodPhrase, foodTotals, formatWhen, peopleLabel, replyList, summarize } from '../lib/format'
 import { mailLink } from '../lib/mail'
 import { useSession } from '../lib/session'
-import { deleteEvent, deleteRsvp, getEvent, mailsFor, rsvpsFor } from '../lib/storage'
+import { attachLocalMedia, deleteEvent, deleteRsvp, getEvent, mailsFor, rsvpsFor } from '../lib/storage'
 import { useRevision } from '../lib/useRevision'
 import type { GatherEvent, MailNote, Rsvp } from '../types'
 
@@ -20,6 +20,17 @@ export function HostPage() {
   const [mails, setMails] = useState<MailNote[]>([])
   const [copied, setCopied] = useState<'link' | 'list' | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const published = useRef('')
+
+  useEffect(() => {
+    if (!event?.mediaKind || event.mediaUrl || published.current === event.id) return
+    published.current = event.id
+    attachLocalMedia(event)
+      .then((next) => {
+        if (next.mediaUrl) setEvent(next)
+      })
+      .catch(() => undefined)
+  }, [event])
 
   useEffect(() => {
     if (!id) return

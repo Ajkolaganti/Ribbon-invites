@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { EventFilm } from '../components/Film'
 import { Missing } from '../components/Missing'
 import { RsvpForm } from '../components/RsvpForm'
-import { getEvent } from '../lib/storage'
+import { attachLocalMedia, getEvent } from '../lib/storage'
 import { useRevision } from '../lib/useRevision'
 import type { GatherEvent } from '../types'
 
@@ -11,6 +11,17 @@ export function InvitePage() {
   const { id } = useParams()
   const revision = useRevision()
   const [event, setEvent] = useState<GatherEvent | null | undefined>(undefined)
+  const published = useRef('')
+
+  useEffect(() => {
+    if (!event?.mediaKind || event.mediaUrl || published.current === event.id) return
+    published.current = event.id
+    attachLocalMedia(event)
+      .then((next) => {
+        if (next.mediaUrl) setEvent(next)
+      })
+      .catch(() => undefined)
+  }, [event])
 
   useEffect(() => {
     if (!id) return

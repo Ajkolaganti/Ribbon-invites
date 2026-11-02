@@ -48,6 +48,7 @@ export type GatherEvent = FilmModel & {
   hostEmail: string
   mediaKind: MediaKind | null
   mediaName: string
+  mediaUrl: string
   createdAt: string
   updatedAt: string
 }

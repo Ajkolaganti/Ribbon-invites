@@ -202,15 +202,17 @@ export function EventFilm({
   audience?: 'guest' | 'host'
   heading?: boolean
 }) {
-  const stored = useStoredMedia(event.mediaKind ? event.id : undefined)
+  const stored = useStoredMedia(!event.mediaUrl && event.mediaKind ? event.id : undefined)
+  const mediaUrl = event.mediaUrl || stored?.url || null
+  const mediaKind = event.mediaUrl ? event.mediaKind : stored?.kind ?? null
   return (
     <Film
       event={event}
       autoPlay={autoPlay}
       audience={audience}
       heading={heading}
-      mediaUrl={stored?.url}
-      mediaKind={stored?.kind ?? null}
+      mediaUrl={mediaUrl}
+      mediaKind={mediaKind}
     />
   )
 }
@@ -303,7 +305,7 @@ export function Film({
   const still = mediaKind === 'image' && mediaUrl ? mediaUrl : theme.image
   const art =
     mediaKind === 'video' && mediaUrl ? (
-      <video ref={videoRef} className="film-video" src={mediaUrl} muted playsInline loop preload="metadata" />
+      <video ref={videoRef} className="film-video" src={mediaUrl} muted playsInline loop preload="auto" />
     ) : (
       <div
         className="film-art"

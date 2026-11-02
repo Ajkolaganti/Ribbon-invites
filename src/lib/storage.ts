@@ -1,5 +1,5 @@
 import type { Allowance, FoodOption, GatherEvent, InviteGuest, MailNote, MediaKind, Motion, Occasion, Rsvp } from '../types'
-import { deleteMedia } from './media'
+import { deleteMedia, loadMedia, removeInviteMedia, uploadInviteMedia } from './media'
 import { supabase } from './supabase'
 
 type EventRow = {
@@ -22,6 +22,7 @@ type EventRow = {
   host_email: string
   media_kind: MediaKind | null
   media_name: string
+  media_url: string
   created_at: string
   updated_at: string
 }
@@ -81,6 +82,7 @@ function eventFrom(row: EventRow): GatherEvent {
     hostEmail: row.host_email,
     mediaKind: row.media_kind,
     mediaName: row.media_name,
+    mediaUrl: row.media_url ?? '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -107,6 +109,7 @@ function eventTo(event: GatherEvent, hostId: string) {
     host_email: event.hostEmail,
     media_kind: event.mediaKind,
     media_name: event.mediaName,
+    media_url: event.mediaUrl,
     created_at: event.createdAt,
     updated_at: event.updatedAt,
   }
@@ -171,7 +174,21 @@ export async function saveEvent(event: GatherEvent) {
   changed()
 }
 
+export async function attachLocalMedia(event: GatherEvent) {
+  if (!event.mediaKind || event.mediaUrl) return event
+  const session = await supabase.auth.getSession()
+  if (session.data.session?.user.id !== event.hostId) return event
+  const stored = await loadMedia(event.id)
+  if (!stored) return event
+  const type = stored.blob.type || (stored.kind === 'video' ? 'video/mp4' : 'image/jpeg')
+  const mediaUrl = await uploadInviteMedia(event.id, stored.blob, type)
+  const next = { ...event, mediaUrl, updatedAt: new Date().toISOString() }
+  await saveEvent(next)
+  return next
+}
+
 export async function deleteEvent(id: string) {
+  await removeInviteMedia(id)
   const result = await supabase.from('ribbon_events').delete().eq('id', id)
   fail(result.error)
   changed()

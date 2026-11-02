@@ -18,6 +18,7 @@ create table if not exists public.ribbon_events (
   host_email text not null default '',
   media_kind text,
   media_name text not null default '',
+  media_url text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

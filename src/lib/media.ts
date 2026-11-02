@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { MediaKind } from '../types'
+import { supabase } from './supabase'
 
 const DB_NAME = 'ribbon-media'
 const STORE = 'files'
@@ -46,6 +47,22 @@ export function loadMedia(eventId: string) {
         request.onerror = () => reject(request.error)
       }),
   )
+}
+
+export async function uploadInviteMedia(eventId: string, file: Blob, contentType: string) {
+  const { error } = await supabase.storage.from('ribbon-media').upload(eventId, file, {
+    upsert: true,
+    contentType: contentType || 'application/octet-stream',
+    cacheControl: '3600',
+  })
+  if (error) throw new Error(error.message)
+  const { data } = supabase.storage.from('ribbon-media').getPublicUrl(eventId)
+  return `${data.publicUrl}?v=${Date.now()}`
+}
+
+export async function removeInviteMedia(eventId: string) {
+  const { error } = await supabase.storage.from('ribbon-media').remove([eventId])
+  if (error && !/not found/i.test(error.message)) throw new Error(error.message)
 }
 
 export function deleteMedia(eventId: string) {

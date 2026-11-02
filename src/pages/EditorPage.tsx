@@ -5,7 +5,7 @@ import { Film } from '../components/Film'
 import { Missing } from '../components/Missing'
 import { plusDays } from '../lib/format'
 import { isEmail, notifyRsvp, sendInviteCreated } from '../lib/mail'
-import { deleteMedia, loadMedia, saveMedia } from '../lib/media'
+import { deleteMedia, loadMedia, removeInviteMedia, saveMedia, uploadInviteMedia } from '../lib/media'
 import { accountName, useSession } from '../lib/session'
 import { getEvent, rsvpsFor, saveEvent } from '../lib/storage'
 import {
@@ -142,6 +142,10 @@ function EditorForm({
 
   useEffect(() => {
     if (!existing?.id || !existing.mediaKind) return
+    if (existing.mediaUrl) {
+      setMediaUrl(existing.mediaUrl)
+      return
+    }
     let cancelled = false
     let objectUrl = ''
     loadMedia(existing.id)
@@ -157,7 +161,7 @@ function EditorForm({
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [existing?.id, existing?.mediaKind])
+  }, [existing?.id, existing?.mediaKind, existing?.mediaUrl])
 
   useEffect(() => {
     document.title = existing ? 'Edit invite · Ribbon' : 'New invite · Ribbon'
@@ -267,12 +271,13 @@ function EditorForm({
     }
     const now = new Date().toISOString()
     const id = existing?.id ?? crypto.randomUUID()
-    const keepingMedia = draft.custom && mediaKind
+    const keepingMedia = Boolean(draft.custom && mediaKind)
+    let nextUrl = keepingMedia ? existing?.mediaUrl ?? '' : ''
     try {
       if (fileRef.current) await saveMedia(id, fileRef.current)
       else if (dropMedia || !keepingMedia) await deleteMedia(id)
     } catch {
-      setError('That file could not be saved in this browser. Guests still see the theme.')
+      setError('That file could not be saved in this browser.')
       return
     }
     const event: GatherEvent = {
@@ -295,11 +300,26 @@ function EditorForm({
       hostEmail: draft.hostEmail.trim(),
       mediaKind: keepingMedia ? mediaKind : null,
       mediaName: keepingMedia ? mediaName : '',
+      mediaUrl: nextUrl,
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     }
     try {
       await saveEvent(event)
+      if (fileRef.current) {
+        event.mediaUrl = await uploadInviteMedia(id, fileRef.current, fileRef.current.type)
+        event.updatedAt = new Date().toISOString()
+        await saveEvent(event)
+      } else if (!keepingMedia) {
+        await removeInviteMedia(id)
+      } else if (!event.mediaUrl) {
+        const stored = await loadMedia(id)
+        if (stored) {
+          event.mediaUrl = await uploadInviteMedia(id, stored.blob, stored.blob.type)
+          event.updatedAt = new Date().toISOString()
+          await saveEvent(event)
+        }
+      }
       if (!existing && isEmail(event.hostEmail)) await sendInviteCreated(event)
       const replies = await rsvpsFor(id)
       await Promise.all(replies.map((rsvp) => notifyRsvp(event, rsvp)))

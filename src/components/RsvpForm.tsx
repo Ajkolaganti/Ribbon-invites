@@ -1,17 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import type { GatherEvent, MailNote, Rsvp } from '../types'
+import type { GatherEvent, Rsvp } from '../types'
 import { foodSum, peopleLabel, trimCounts } from '../lib/format'
 import { isEmail, notifyRsvp } from '../lib/mail'
 import { guestReply, saveRsvp } from '../lib/storage'
-
-function mailSummary(notes: MailNote[]) {
-  const failed = notes.filter((note) => note.status === 'failed')
-  const sent = notes.length - failed.length
-  if (failed.length === 0) return sent === 1 ? 'The email was sent.' : 'The emails were sent.'
-  if (sent === 0) return failed[0].error
-  return `${sent} sent. ${failed[0].error}`
-}
 
 export function RsvpForm({ event }: { event: GatherEvent }) {
   const [name, setName] = useState('')
@@ -23,7 +15,6 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
   const [existingId, setExistingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState<Rsvp | null>(null)
-  const [notices, setNotices] = useState<MailNote[]>([])
 
   async function loadMatch() {
     if (!name.trim()) return
@@ -95,8 +86,7 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
         note: note.trim(),
         email: email.trim(),
       })
-      const notes = await notifyRsvp(event, rsvp)
-      setNotices(notes)
+      await notifyRsvp(event, rsvp)
       setSaved(rsvp)
       setError('')
     } catch (cause) {
@@ -114,7 +104,6 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
             ? `${peopleLabel(saved.partySize)} from you.`
             : 'The host has your no.'}
           {' '}The host has your reply.
-          {notices.length > 0 ? ` ${mailSummary(notices)}` : ''}
         </p>
         <button
           type="button"

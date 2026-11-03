@@ -1,4 +1,5 @@
 export function apiUrl(path: string) {
-  const base = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/$/, '')
+  let base = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/$/, '')
+  if (base && !/^https?:\/\//i.test(base)) base = `https://${base}`
   return `${base}${path}`
 }

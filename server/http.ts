@@ -30,6 +30,8 @@ function allowedOrigins() {
   return new Set([
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'https://ribbon-invites.pinglynk.com',
+    'https://ribbon-invites.vercel.app',
     ...(app ? [app] : []),
     ...configured,
   ])

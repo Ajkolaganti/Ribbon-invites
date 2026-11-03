@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { EventFacts } from '../components/EventFacts'
 import { EventFilm } from '../components/Film'
 import { GuestList } from '../components/GuestList'
+import { HostReplies } from '../components/HostReplies'
 import { Missing } from '../components/Missing'
-import { foodPhrase, foodTotals, formatWhen, peopleLabel, replyList, summarize } from '../lib/format'
 import { mailLink } from '../lib/mail'
 import { useSession } from '../lib/session'
-import { attachLocalMedia, deleteEvent, deleteRsvp, getEvent, mailsFor, rsvpsFor } from '../lib/storage'
+import { attachLocalMedia, deleteEvent, deleteRsvp, getEvent, guestsFor, mailsFor, rsvpsFor } from '../lib/storage'
+import { replyList } from '../lib/format'
 import { useRevision } from '../lib/useRevision'
-import type { GatherEvent, MailNote, Rsvp } from '../types'
+import type { GatherEvent, InviteGuest, MailNote, Rsvp } from '../types'
 
 export function HostPage() {
   const { id } = useParams()
@@ -17,6 +19,7 @@ export function HostPage() {
   const revision = useRevision()
   const [event, setEvent] = useState<GatherEvent | null | undefined>(undefined)
   const [rsvps, setRsvps] = useState<Rsvp[]>([])
+  const [guests, setGuests] = useState<InviteGuest[]>([])
   const [mails, setMails] = useState<MailNote[]>([])
   const [copied, setCopied] = useState<'link' | 'list' | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -45,6 +48,13 @@ export function HostPage() {
       .catch(() => {
         if (!cancel) setEvent(null)
       })
+    guestsFor(id)
+      .then((invited) => {
+        if (!cancel) setGuests(invited)
+      })
+      .catch(() => {
+        if (!cancel) setGuests([])
+      })
     return () => {
       cancel = true
     }
@@ -64,10 +74,6 @@ export function HostPage() {
     )
   }
 
-  const when = formatWhen(event.date, event.time)
-  const stats = summarize(rsvps)
-  const totals = foodTotals(rsvps, event.foods)
-  const maxFood = Math.max(1, ...event.foods.map((food) => totals.get(food.id) ?? 0))
   const url = `${window.location.origin}/i/${event.id}`
 
   async function copy(value: string, kind: 'link' | 'list') {
@@ -85,14 +91,7 @@ export function HostPage() {
         <EventFilm event={event} audience="host" />
       </div>
       <div className="stack loose">
-        <div>
-          <p className="film-kicker">{when.dateLine}</p>
-          <h1>{event.title}</h1>
-          <p className="muted">
-            {when.timeLine} · {event.venueName}
-            {event.venueAddress ? ` · ${event.venueAddress}` : ''}
-          </p>
-        </div>
+        <EventFacts event={event} />
         <section className="panel stack">
           <h2>Share</h2>
           <p className="muted">
@@ -112,24 +111,25 @@ export function HostPage() {
           </div>
         </section>
         <GuestList event={event} />
-        <section className="stack">
+        <HostReplies event={event} rsvps={rsvps} guests={guests} onRemove={(replyId) => void deleteRsvp(replyId)} />
+        <section className="panel stack">
           <h2>Reply mail</h2>
           <p className="muted">
             {event.hostEmail
-              ? `Each reply is emailed to ${event.hostEmail} through Resend.`
+              ? `Each reply is emailed to ${event.hostEmail}.`
               : 'Add your email on the invite to get a note each time someone replies.'}
           </p>
           {mails.length === 0 ? (
             <p className="muted">No emails yet.</p>
           ) : (
             mails.map((mail) => (
-              <article className="reply" key={mail.id}>
-                <div>
+              <article className="guest-card" key={mail.id}>
+                <header>
                   <strong>{mail.subject}</strong>
-                  <p className="muted">To {mail.to}</p>
-                  <p>{mail.body}</p>
-                  <p className="muted">{mail.status === 'sent' ? 'Sent' : mail.error || 'Not sent.'}</p>
-                </div>
+                  <span>{mail.status === 'sent' ? 'Sent' : 'Not sent'}</span>
+                </header>
+                <p className="muted">To {mail.to}</p>
+                {mail.status !== 'sent' && mail.error ? <p className="muted">{mail.error}</p> : null}
                 {mail.status !== 'sent' && (
                   <a className="btn secondary" href={mailLink(mail)}>
                     Open in mail
@@ -137,66 +137,6 @@ export function HostPage() {
                 )}
               </article>
             ))
-          )}
-        </section>
-        <section className="stack">
-          <h2>Who's coming</h2>
-          <div className="stats">
-            <div>
-              <strong>{stats.people}</strong>
-              <span>people</span>
-            </div>
-            <div>
-              <strong>{stats.coming}</strong>
-              <span>coming</span>
-            </div>
-            <div>
-              <strong>{stats.declined}</strong>
-              <span>can't</span>
-            </div>
-            <div>
-              <strong>{stats.replies}</strong>
-              <span>replies</span>
-            </div>
-          </div>
-          <div className="stack">
-            {event.foods.map((food) => {
-              const count = totals.get(food.id) ?? 0
-              return (
-                <div key={food.id}>
-                  <div className="food-total-top">
-                    <span>{food.label}</span>
-                    <span>{count}</span>
-                  </div>
-                  <div className="bar" aria-hidden>
-                    <span style={{ width: `${(count / maxFood) * 100}%`, background: event.accent }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          {rsvps.length === 0 ? (
-            <p className="muted">Replies show up here after someone opens the invite.</p>
-          ) : (
-            <div className="stack">
-              {rsvps.map((rsvp) => (
-                <article className="reply" key={rsvp.id}>
-                  <div>
-                    <strong>{rsvp.name}</strong>
-                    <p className="muted">
-                      {rsvp.coming ? peopleLabel(rsvp.partySize) : "Can't come"}
-                      {rsvp.coming && foodPhrase(event.foods, rsvp.foodCounts)
-                        ? ` · ${foodPhrase(event.foods, rsvp.foodCounts)}`
-                        : ''}
-                    </p>
-                    {rsvp.note && <p>{rsvp.note}</p>}
-                  </div>
-                  <button type="button" className="btn secondary" onClick={() => void deleteRsvp(rsvp.id)}>
-                    Remove
-                  </button>
-                </article>
-              ))}
-            </div>
           )}
         </section>
         {confirming ? (

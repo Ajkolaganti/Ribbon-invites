@@ -368,6 +368,42 @@ textarea { min-height: 7rem; resize: vertical; }
 
 .bar > span { display: block; height: 100%; border-radius: inherit; }
 
+.guest-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+
+.guest-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  align-items: baseline;
+}
+
+.guest-card header span { color: var(--muted); }
+
+.plate-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plate-list li {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.88rem;
+  background: #fffaf4;
+}
+
 .reply {
   display: flex;
   justify-content: space-between;

@@ -41,6 +41,17 @@ function formatTime(time: string) {
   return value.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
 
+export function repliedWhen(iso: string) {
+  const value = new Date(iso)
+  if (Number.isNaN(value.getTime())) return ''
+  return value.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 export function peopleLabel(count: number) {
   return `${count} ${count === 1 ? 'person' : 'people'}`
 }

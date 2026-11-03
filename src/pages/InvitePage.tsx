@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { EventFacts } from '../components/EventFacts'
 import { EventFilm } from '../components/Film'
 import { Missing } from '../components/Missing'
 import { RsvpForm } from '../components/RsvpForm'
@@ -60,7 +61,10 @@ export function InvitePage() {
           Reply
         </a>
       </div>
-      <RsvpForm event={event} />
+      <div className="stack">
+        <EventFacts event={event} />
+        <RsvpForm event={event} />
+      </div>
     </div>
   )
 }

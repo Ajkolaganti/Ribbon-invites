@@ -101,6 +101,16 @@ a { color: inherit; }
 .hint { font-size: 0.92rem; }
 .form-error { color: var(--rust); }
 
+.facts { display: flex; flex-direction: column; gap: 0.7rem; }
+.facts p { display: flex; flex-direction: column; gap: 0.15rem; }
+.facts span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 h1 {
   font-family: Fraunces, serif;
   font-weight: 560;

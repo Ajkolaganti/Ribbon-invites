@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { GatherEvent, Rsvp } from '../types'
-import { foodSum, peopleLabel, plain, trimCounts } from '../lib/format'
+import { foodSum, formatWhen, peopleLabel, plain, trimCounts } from '../lib/format'
 import { isEmail, notifyRsvp } from '../lib/mail'
 import { guestReply, saveRsvp } from '../lib/storage'
 
@@ -15,28 +15,41 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
   const [existingId, setExistingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState<Rsvp | null>(null)
+  const attendanceLocked = useRef(false)
 
   async function loadMatch() {
-    if (!plain(name)) return
+    const guestName = plain(name)
+    if (!guestName) return
     try {
-      const match = await guestReply(event.id, name)
+      const match = await guestReply(event.id, guestName)
+      if (plain(name) !== guestName) return
       if (!match) {
         setExistingId(null)
         return
       }
       setExistingId(match.id)
-      setComing(match.coming)
-      setPartySize(match.coming ? match.partySize : 1)
-      setCounts(match.foodCounts)
-      setNote(plain(match.note))
-      setEmail(plain(match.email))
+      if (!attendanceLocked.current) {
+        setComing(match.coming)
+        setPartySize(match.coming ? match.partySize : 1)
+        setCounts(match.foodCounts)
+      }
+      setNote((current) => plain(current) || plain(match.note))
+      setEmail((current) => plain(current) || plain(match.email))
       setError('')
     } catch {
       setError('Your earlier reply could not be loaded.')
     }
   }
 
+  function choose(next: boolean) {
+    attendanceLocked.current = true
+    setError('')
+    setComing(next)
+  }
+
   function changeParty(next: number) {
+    attendanceLocked.current = true
+    setComing(true)
     setError('')
     const size = Math.min(30, Math.max(1, next))
     setPartySize(size)
@@ -48,6 +61,8 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
   }
 
   function changeFood(id: string, next: number) {
+    attendanceLocked.current = true
+    setComing(true)
     setError('')
     setCounts((current) => {
       const others = foodSum(current) - (current[id] ?? 0)
@@ -102,6 +117,8 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
   }
 
   if (saved) {
+    const when = formatWhen(event.date, event.time)
+    const place = [event.venueName, event.venueAddress].filter(Boolean).join(', ')
     return (
       <section className="panel stack" id="reply" aria-live="polite">
         <p className="film-kicker">Reply saved</p>
@@ -112,6 +129,11 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
             : 'The host has your no.'}
           {' '}The host has your reply.
         </p>
+        <div className="facts">
+          <p><span>When</span>{when.dateLine} · {when.timeLine}</p>
+          <p><span>Where</span>{place || 'Place to come'}</p>
+          <p><span>From</span>{event.hostName}</p>
+        </div>
         <button
           type="button"
           className="btn secondary"
@@ -136,7 +158,10 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
         <span>Your name</span>
         <input
           value={name}
-          onChange={(change) => setName(change.target.value)}
+          onChange={(change) => {
+            attendanceLocked.current = false
+            setName(change.target.value)
+          }}
           onBlur={loadMatch}
           maxLength={60}
           autoComplete="name"
@@ -145,11 +170,11 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
       </label>
       {existingId && <p className="hint">This updates the reply already saved under that name.</p>}
       <div className="choices">
-        <button type="button" className="choice" aria-pressed={coming} onClick={() => { setError(''); setComing(true) }}>
+        <button type="button" className="choice" aria-pressed={coming} onClick={() => choose(true)}>
           <strong>I'm coming</strong>
           <small>Tell us how many, and what you'll eat</small>
         </button>
-        <button type="button" className="choice" aria-pressed={!coming} onClick={() => { setError(''); setComing(false) }}>
+        <button type="button" className="choice" aria-pressed={!coming} onClick={() => choose(false)}>
           <strong>I can't come</strong>
           <small>The host will still see your name</small>
         </button>

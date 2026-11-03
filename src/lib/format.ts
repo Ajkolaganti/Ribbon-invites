@@ -1,5 +1,9 @@
 import type { FoodOption, GatherEvent, Rsvp } from '../types'
 
+export function plain(value: unknown) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 export function plusDays(days: number) {
   const date = new Date()
   date.setDate(date.getDate() + days)

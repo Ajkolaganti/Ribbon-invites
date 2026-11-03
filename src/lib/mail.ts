@@ -1,6 +1,6 @@
 import { apiUrl } from './api'
 import { emailHtml } from './emailHtml'
-import { foodPhrase, formatWhen, peopleLabel } from './format'
+import { foodPhrase, formatWhen, peopleLabel, plain } from './format'
 import { replaceMailForRsvp } from './storage'
 import { themeById } from '../themes'
 import type { GatherEvent, MailNote, Rsvp } from '../types'
@@ -15,8 +15,8 @@ function filmPoster(event: GatherEvent, href: string) {
   }
 }
 
-export function isEmail(value: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+export function isEmail(value: unknown) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(plain(value))
 }
 
 export function mailLink(note: MailNote) {
@@ -46,7 +46,7 @@ export async function notifyRsvp(event: GatherEvent, rsvp: Rsvp) {
       eventId: event.id,
       rsvpId: rsvp.id,
       kind: 'host',
-      to: event.hostEmail.trim(),
+      to: plain(event.hostEmail),
       subject: `${rsvp.name} replied to ${event.title}`,
       body: `${facts}\n\nSee every reply: ${hostUrl}`,
       html: emailHtml({
@@ -80,7 +80,7 @@ export async function notifyRsvp(event: GatherEvent, rsvp: Rsvp) {
       eventId: event.id,
       rsvpId: rsvp.id,
       kind: 'guest',
-      to: rsvp.email.trim(),
+      to: plain(rsvp.email),
       subject: `Your reply to ${event.title}`,
       body: `${event.hostName} has your reply to ${event.title}.\n${coming}${note}\n${when.dateLine} · ${when.timeLine}\n${place}\n\nOpen the invite:\n${inviteUrl}`,
       html: emailHtml({
@@ -179,7 +179,7 @@ export async function sendInviteCreated(event: GatherEvent) {
     eventId: event.id,
     rsvpId: event.id,
     kind: 'host',
-    to: event.hostEmail.trim(),
+    to: plain(event.hostEmail),
     subject: `Your film for ${event.title} is ready`,
     body: `${event.hostName}, ${event.title} is saved.\n${when.dateLine} · ${when.timeLine}\n${place}\n\nPlay the film: ${filmUrl}\nManage replies: ${hostUrl}`,
     html: emailHtml({

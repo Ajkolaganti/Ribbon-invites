@@ -57,8 +57,9 @@ function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message)
 }
 
-function clock(value: string) {
-  return value.length >= 5 ? value.slice(0, 5) : value
+function clock(value: string | null) {
+  const time = value ?? ''
+  return time.length >= 5 ? time.slice(0, 5) : time
 }
 
 function eventFrom(row: EventRow): GatherEvent {
@@ -66,22 +67,22 @@ function eventFrom(row: EventRow): GatherEvent {
     id: row.id,
     hostId: row.host_id,
     occasion: row.occasion,
-    title: row.title,
-    hostName: row.host_name,
-    message: row.message,
-    line: row.line,
-    date: row.event_date,
+    title: row.title ?? '',
+    hostName: row.host_name ?? '',
+    message: row.message ?? '',
+    line: row.line ?? '',
+    date: row.event_date ?? '',
     time: clock(row.event_time),
-    venueName: row.venue_name,
-    venueAddress: row.venue_address,
+    venueName: row.venue_name ?? '',
+    venueAddress: row.venue_address ?? '',
     foods: row.foods ?? [],
     artId: row.art_id,
     motion: row.motion,
     accent: row.accent,
     custom: row.custom,
-    hostEmail: row.host_email,
+    hostEmail: row.host_email ?? '',
     mediaKind: row.media_kind,
-    mediaName: row.media_name,
+    mediaName: row.media_name ?? '',
     mediaUrl: row.media_url ?? '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -119,12 +120,12 @@ function rsvpFrom(row: RsvpRow): Rsvp {
   return {
     id: row.id,
     eventId: row.event_id,
-    name: row.name,
+    name: row.name ?? '',
     coming: row.coming,
     partySize: row.party_size,
     foodCounts: row.food_counts ?? {},
-    note: row.note,
-    email: row.email,
+    note: row.note ?? '',
+    email: row.email ?? '',
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }

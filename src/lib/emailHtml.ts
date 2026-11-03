@@ -52,7 +52,7 @@ export function emailHtml(layout: EmailLayout) {
     : ''
 
   const rows = (layout.rows ?? [])
-    .filter((row) => row.value.trim())
+    .filter((row) => typeof row.value === 'string' && row.value.trim())
     .map(
       (row) => `<tr>
         <td style="padding:14px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#6d675f;">${escapeHtml(row.label)}</td>

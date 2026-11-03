@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import type { GatherEvent, Rsvp } from '../types'
-import { foodSum, peopleLabel, trimCounts } from '../lib/format'
+import { foodSum, peopleLabel, plain, trimCounts } from '../lib/format'
 import { isEmail, notifyRsvp } from '../lib/mail'
 import { guestReply, saveRsvp } from '../lib/storage'
 
@@ -17,7 +17,7 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
   const [saved, setSaved] = useState<Rsvp | null>(null)
 
   async function loadMatch() {
-    if (!name.trim()) return
+    if (!plain(name)) return
     try {
       const match = await guestReply(event.id, name)
       if (!match) {
@@ -28,8 +28,8 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
       setComing(match.coming)
       setPartySize(match.coming ? match.partySize : 1)
       setCounts(match.foodCounts)
-      setNote(match.note)
-      setEmail(match.email ?? '')
+      setNote(plain(match.note))
+      setEmail(plain(match.email))
       setError('')
     } catch {
       setError('Your earlier reply could not be loaded.')
@@ -58,11 +58,14 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
 
   async function submit(formEvent: FormEvent) {
     formEvent.preventDefault()
-    if (!name.trim()) {
+    const guestName = plain(name)
+    const guestEmail = plain(email)
+    const guestNote = plain(note)
+    if (!guestName) {
       setError('Add your name so the host knows who replied.')
       return
     }
-    if (email.trim() && !isEmail(email)) {
+    if (guestEmail && !isEmail(guestEmail)) {
       setError('That email does not look complete.')
       return
     }
@@ -79,14 +82,18 @@ export function RsvpForm({ event }: { event: GatherEvent }) {
     try {
       const rsvp = await saveRsvp({
         eventId: event.id,
-        name: name.trim(),
+        name: guestName,
         coming,
         partySize: coming ? partySize : 0,
         foodCounts,
-        note: note.trim(),
-        email: email.trim(),
+        note: guestNote,
+        email: guestEmail,
       })
-      await notifyRsvp(event, rsvp)
+      try {
+        await notifyRsvp(event, rsvp)
+      } catch {
+        // The reply is already saved. A mail problem must not block it.
+      }
       setSaved(rsvp)
       setError('')
     } catch (cause) {
